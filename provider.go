@@ -45,8 +45,8 @@ func (p *Provider) Metadata() openfeature.Metadata {
 
 // BooleanEvaluation evaluates a boolean flag.
 func (p *Provider) BooleanEvaluation(ctx context.Context, flag string, defaultValue bool, evalCtx openfeature.FlattenedContext) openfeature.BoolResolutionDetail {
-	user, ok := evalCtx["user"].(*user.User)
-	if !ok {
+	user := p.user(evalCtx)
+	if user == nil {
 		return openfeature.BoolResolutionDetail{
 			Value:                    defaultValue,
 			ProviderResolutionDetail: userNotFoundDetail(),
@@ -70,8 +70,8 @@ func (p *Provider) BooleanEvaluation(ctx context.Context, flag string, defaultVa
 
 // StringEvaluation evaluates a string flag.
 func (p *Provider) StringEvaluation(ctx context.Context, flag string, defaultValue string, evalCtx openfeature.FlattenedContext) openfeature.StringResolutionDetail {
-	user, ok := evalCtx["user"].(*user.User)
-	if !ok {
+	user := p.user(evalCtx)
+	if user == nil {
 		return openfeature.StringResolutionDetail{
 			Value:                    defaultValue,
 			ProviderResolutionDetail: userNotFoundDetail(),
@@ -95,8 +95,8 @@ func (p *Provider) StringEvaluation(ctx context.Context, flag string, defaultVal
 
 // FloatEvaluation evaluates a float64 flag.
 func (p *Provider) FloatEvaluation(ctx context.Context, flag string, defaultValue float64, evalCtx openfeature.FlattenedContext) openfeature.FloatResolutionDetail {
-	user, ok := evalCtx["user"].(*user.User)
-	if !ok {
+	user := p.user(evalCtx)
+	if user == nil {
 		return openfeature.FloatResolutionDetail{
 			Value:                    defaultValue,
 			ProviderResolutionDetail: userNotFoundDetail(),
@@ -120,8 +120,8 @@ func (p *Provider) FloatEvaluation(ctx context.Context, flag string, defaultValu
 
 // IntEvaluation evaluates an int64 flag.
 func (p *Provider) IntEvaluation(ctx context.Context, flag string, defaultValue int64, evalCtx openfeature.FlattenedContext) openfeature.IntResolutionDetail {
-	user, ok := evalCtx["user"].(*user.User)
-	if !ok {
+	user := p.user(evalCtx)
+	if user == nil {
 		return openfeature.IntResolutionDetail{
 			Value:                    defaultValue,
 			ProviderResolutionDetail: userNotFoundDetail(),
@@ -145,8 +145,8 @@ func (p *Provider) IntEvaluation(ctx context.Context, flag string, defaultValue 
 
 // ObjectEvaluation evaluates an any flag.
 func (p *Provider) ObjectEvaluation(ctx context.Context, flag string, defaultValue any, evalCtx openfeature.FlattenedContext) openfeature.InterfaceResolutionDetail {
-	user, ok := evalCtx["user"].(*user.User)
-	if !ok {
+	user := p.user(evalCtx)
+	if user == nil {
 		return openfeature.InterfaceResolutionDetail{
 			Value:                    defaultValue,
 			ProviderResolutionDetail: userNotFoundDetail(),
@@ -204,4 +204,14 @@ func (p *Provider) EventChannel() <-chan openfeature.Event {
 // Status returns the state of the provider.
 func (p *Provider) Status() openfeature.State {
 	return p.status
+}
+
+func (p *Provider) user(evalCtx openfeature.FlattenedContext) *user.User {
+	if user, ok := evalCtx["user"].(*user.User); ok {
+		return user
+	}
+	if key, ok := evalCtx[openfeature.TargetingKey].(string); ok {
+		return user.NewUser(key, nil)
+	}
+	return nil
 }
