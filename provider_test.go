@@ -8,7 +8,7 @@ import (
 	"github.com/bucketeer-io/go-server-sdk/pkg/bucketeer/user"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	openfeature "github.com/open-feature/go-sdk/openfeature"
+	"github.com/open-feature/go-sdk/openfeature"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -457,5 +457,52 @@ func TestHooks(t *testing.T) {
 
 	if len(result) != 0 {
 		t.Errorf("Hooks() = %v, want %v", result, 0)
+	}
+}
+
+func Test_user(t *testing.T) {
+	t.Parallel()
+
+	testcases := map[string]struct {
+		evalCtx  openfeature.FlattenedContext
+		expected *user.User
+	}{
+		"empty evalCtx": {
+			evalCtx:  openfeature.FlattenedContext{},
+			expected: nil,
+		},
+		"user key": {
+			evalCtx: openfeature.FlattenedContext{
+				"user": user.NewUser("user-id", map[string]string{"key": "value"}),
+			},
+			expected: user.NewUser("user-id", map[string]string{"key": "value"}),
+		},
+		"targeting key": {
+			evalCtx: openfeature.FlattenedContext{
+				openfeature.TargetingKey: "targeting-key",
+			},
+			expected: user.NewUser("targeting-key", nil),
+		},
+		"both keys": {
+			evalCtx: openfeature.FlattenedContext{
+				"user":                   user.NewUser("user-id", map[string]string{"key": "value"}),
+				openfeature.TargetingKey: "targeting-key",
+			},
+			expected: user.NewUser("user-id", map[string]string{"key": "value"}),
+		},
+	}
+
+	p := NewProvider(nil)
+
+	for name, tc := range testcases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			result := p.user(tc.evalCtx)
+
+			if diff := cmp.Diff(tc.expected, result, cmpopts.IgnoreUnexported(user.User{})); diff != "" {
+				t.Errorf("toUser() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
